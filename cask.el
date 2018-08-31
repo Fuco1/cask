@@ -634,19 +634,42 @@ This function return a `cask-bundle' object."
   "Update BUNDLE dependencies.
 
 Return list of updated packages."
+  (cask-print (green "Loading package information... "))
   (cask--with-environment bundle
     :force t
     :refresh t
-    (shut-up
+    (cask-print (green "done") "\n")
+    (let ((upgradable (epl-find-upgrades)))
+      (cask-print (green "Package operations: %d updates, %d removals\n"
+                         (length upgradable) 0))
       (condition-case err
-          (prog1
-              (epl-upgrade)
-            (--each (cask--fetcher-dependencies bundle)
-              (cask--delete-dependency bundle it)
-              (cask--install-dependency bundle it it-index)))
-        (error
-         (signal 'cask-failed-installation
-                 (list (car err) err (shut-up-current-output))))))))
+          (progn
+            (-each-indexed upgradable
+              (lambda (index upgrade)
+                (let ((current (epl-upgrade-installed upgrade))
+                      (next (epl-upgrade-available upgrade)))
+                  (cask-print
+                   (format "  - Updating [%2d/%d]" (1+ index) (length upgradable))
+                   " " (green "%s" (epl-package-name current)) " "
+                   "("
+                   (yellow "%s" (--if-let (epl-package-version current)
+                                    (elp-package-version-string current)
+                                  "latest"))
+                   " -> "
+                   (yellow "%s" (--if-let (epl-package-version next)
+                                    (elp-package-version-string next)
+                                  "latest"))
+                   ")... ")
+                  (shut-up (epl-package-install next 'force))
+                  (cask-print "done\n"))))
+            (shut-up (--each (cask--fetcher-dependencies bundle)
+                       (cask--delete-dependency bundle it)
+                       (cask--install-dependency bundle it it-index)))
+            upgradable)
+        (error nil
+               ;; (signal 'cask-failed-installation
+               ;;         (list (car err) err (shut-up-current-output)))
+               )))))
 
 (defun cask-outdated (bundle)
   "Return list of `epl-upgrade' objects for outdated BUNDLE dependencies."

@@ -168,9 +168,7 @@ Git is available in `exec-path'."
 All packages that are specified in the Cask-file will be updated
 including their dependencies."
   (cask-cli/with-handled-errors
-    (-when-let (upgrades (cask-update (cask-cli--bundle)))
-      (princ "Updated packages:\n")
-      (-each upgrades 'cask-cli--print-upgrade))))
+   (cask-update (cask-cli--bundle))))
 
 (defun cask-cli/init ()
   "Initialize the current directory with a Cask-file.
