@@ -655,6 +655,15 @@ Return list of updated packages."
     :refresh t
     (epl-find-upgrades)))
 
+(defun cask--get-dependencies-to-install (bundle)
+  "Return all the dependencies which are not installed or linked."
+  (let ((dependencies (cask--dependencies bundle)))
+    (-reject
+     (lambda (dep)
+       (let ((name (cask-dependency-name dep)))
+         (or (epl-package-installed-p name) (cask-linked-p bundle name))))
+     dependencies)))
+
 (defun cask-install (bundle)
   "Install BUNDLE dependencies.
 
@@ -675,18 +684,22 @@ to install, and ERR is the original error data."
       :force t
       :refresh t
       (cask-print (green "done") "\n")
-      (cask-print (green "Package operations: %d installs, %d removals\n" (length (cask--dependencies bundle)) 0))
-      (-each-indexed (cask--dependencies bundle)
-        (lambda (index dependency)
-          (condition-case err
-              (cask--install-dependency bundle dependency index)
-            (cask-missing-dependency
-             (push dependency missing-dependencies))
-            (error
-             (signal 'cask-failed-installation
-                     (list dependency err (shut-up-current-output)))))))
-      (when missing-dependencies
-        (signal 'cask-missing-dependencies (nreverse missing-dependencies))))))
+      (let ((to-install (cask--get-dependencies-to-install bundle)))
+        (cask-print (green "Package operations: %d installs, %d removals\n"
+                           (length to-install) 0))
+        (if (> (length to-install) 0)
+            (-each-indexed to-install
+              (lambda (index dependency)
+                (condition-case err
+                    (cask--install-dependency bundle dependency index)
+                  (cask-missing-dependency
+                   (push dependency missing-dependencies))
+                  (error
+                   (signal 'cask-failed-installation
+                           (list dependency err (shut-up-current-output)))))))
+          (cask-print (green "Nothing to do!\n")))
+        (when missing-dependencies
+          (signal 'cask-missing-dependencies (nreverse missing-dependencies)))))))
 
 (defun cask-caskify (bundle &optional dev-mode)
   "Create Cask-file for BUNDLE path.
