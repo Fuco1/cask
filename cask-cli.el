@@ -127,13 +127,16 @@ The file is written to the Cask project root path with name
   (f-write-text (cask-define-package-string (cask-cli--bundle)) 'utf-8
                 (cask-define-package-file (cask-cli--bundle))))
 
-(defun cask-cli/install ()
+(defun cask-cli/install (&rest args)
   "Install all packages specified in the Cask-file.
 
 The dependencies to packages are also installed.  If a package
 already is installed, it will not be installed again."
-  (cask-cli/with-handled-errors
-    (cask-install (cask-cli--bundle))))
+  (let ((no-dev nil))
+    (cond ((string= (car args) "no-dev")
+           (setq no-dev t)))
+    (cask-cli/with-handled-errors
+     (cask-install (cask-cli--bundle) no-dev))))
 
 (defun cask-cli/upgrade-cask ()
   "Upgrade Cask itself and its dependencies.
@@ -370,7 +373,7 @@ Commands:
  (default "install")
 
  (command "pkg-file" cask-cli/pkg-file)
- (command "install" cask-cli/install)
+ (command "install [*]" cask-cli/install)
  (command "update" cask-cli/update)
  (command "upgrade" cask-cli/upgrade-cask)
  (command "upgrade-cask" cask-cli/upgrade-cask)

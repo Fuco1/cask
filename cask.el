@@ -631,7 +631,7 @@ Return list of updated packages."
     :refresh t
     (epl-find-upgrades)))
 
-(defun cask-install (bundle)
+(defun cask-install (bundle &optional no-dev)
   "Install BUNDLE dependencies.
 
 Install all available dependencies.
@@ -649,7 +649,9 @@ to install, and ERR is the original error data."
     (cask--with-environment bundle
       :force t
       :refresh t
-      (-each-indexed (cask--dependencies bundle)
+      (-each-indexed (if no-dev
+                         (cask--runtime-dependencies bundle)
+                       (cask--dependencies bundle))
         (lambda (index dependency)
           (shut-up
             (condition-case err
