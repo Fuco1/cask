@@ -652,24 +652,21 @@ Return list of updated packages."
                    (format "  - Updating [%2d/%d]" (1+ index) (length upgradable))
                    " " (green "%s" (epl-package-name current)) " "
                    "("
-                   (yellow "%s" (--if-let (epl-package-version current)
-                                    (elp-package-version-string current)
-                                  "latest"))
+                   ;; (format "current %s next %s" current next)
+                   (yellow "%s" (epl-package-version-string current))
                    " -> "
-                   (yellow "%s" (--if-let (epl-package-version next)
-                                    (elp-package-version-string next)
-                                  "latest"))
+                   ;; (yellow "%s" (elp-package-version-string next)) ;; FIXME
                    ")... ")
-                  (shut-up (epl-package-install next 'force))
+                  (epl-package-install next 'force)
                   (cask-print "done\n"))))
             (shut-up (--each (cask--fetcher-dependencies bundle)
                        (cask--delete-dependency bundle it)
                        (cask--install-dependency bundle it it-index)))
             upgradable)
-        (error nil
-               ;; (signal 'cask-failed-installation
-               ;;         (list (car err) err (shut-up-current-output)))
-               )))))
+        (error err
+               (signal 'cask-failed-installation
+                       (list (car err) err "" ;;  (shut-up-current-output)
+                             )))))))
 
 (defun cask-outdated (bundle)
   "Return list of `epl-upgrade' objects for outdated BUNDLE dependencies."
